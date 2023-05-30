@@ -1,0 +1,92 @@
+version: "3.9"
+
+x-logging:
+  &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "20m"
+      max-file: "5"
+
+services:
+  datacollector:
+    image: vpn.energyadvice.lt:10010/datacollector
+    container_name: datacollector
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
+      LT_ENERGYADVICE_DATACOLLECTOR_REMOTEMANAGEMENT_ENABLED: true
+    volumes:
+      - ./datacollector.properties:/opt/datacollector/config.properties
+      - ./datacollector_data:/opt/datacollector/data
+    ports:
+      - "8080:8080"
+      - "47808:47808/udp"
+    depends_on:
+      - mysql
+    networks:
+      - datacollector
+
+  datapusher:
+    image: vpn.energyadvice.lt:10010/datapusher
+    container_name: datapusher
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
+    volumes:
+      - ./datapusher.properties:/opt/datapusher/config.properties
+      - ./datapusher_data:/opt/datapusher/data
+    ports:
+      - "47809-47909:47809-47909/udp"
+    depends_on:
+      - mysql
+    networks:
+      - datacollector
+
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:3306:3306"
+    networks:
+      - datacollector
+
+  reverse-proxy:
+    image: vpn.energyadvice.lt:10010/datahub-reverse-proxy:latest
+    container_name: reverse-proxy
+    restart: unless-stopped
+    <<: *logging
+    ports:
+      - "80:80"
+    depends_on:
+      - datacollector
+      - datapusher
+    networks:
+      - datacollector
+
+  datahub-proxy:
+    image: vpn.energyadvice.lt:10010/proxy/client
+    container_name: datahub-proxy
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      REQUESTED_SUBDOMAIN: "datahub"
+      SERVICE_NAME: "datahub"
+      AUTH_TOKEN: ${AUTH_TOKEN}
+      PROXIED_ADDRESS: "http://reverse-proxy:80"
+      SERVER: "https://datahub.app.energyadvice.lt"
+    networks:
+      - datacollector
+
+networks:
+  datacollector:
