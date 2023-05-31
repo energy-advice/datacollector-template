@@ -10,7 +10,7 @@ x-logging:
 
 services:
   datacollector:
-    image: vpn.energyadvice.lt:10010/datacollector
+    image: vpn.energyadvice.lt:10020/datacollector
     container_name: datacollector
     restart: unless-stopped
     <<: *logging
@@ -30,7 +30,7 @@ services:
       - datacollector
 
   datapusher:
-    image: vpn.energyadvice.lt:10010/datapusher
+    image: vpn.energyadvice.lt:10020/datapusher
     container_name: datapusher
     restart: unless-stopped
     <<: *logging
@@ -62,7 +62,7 @@ services:
       - datacollector
 
   reverse-proxy:
-    image: vpn.energyadvice.lt:10010/datahub-reverse-proxy:latest
+    image: vpn.energyadvice.lt:10020/datahub-reverse-proxy:latest
     container_name: reverse-proxy
     restart: unless-stopped
     <<: *logging
@@ -75,7 +75,7 @@ services:
       - datacollector
 
   datahub-proxy:
-    image: vpn.energyadvice.lt:10010/proxy/client
+    image: vpn.energyadvice.lt:10020/proxy/client
     container_name: datahub-proxy
     restart: unless-stopped
     <<: *logging
