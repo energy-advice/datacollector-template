@@ -22,10 +22,11 @@ services:
       - ./datacollector.properties:/opt/datacollector/config.properties
       - ./datacollector_data:/opt/datacollector/data
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
       - "47808:47808/udp"
     depends_on:
       - mysql
+      - redis
     networks:
       - datacollector
 
@@ -61,13 +62,27 @@ services:
     networks:
       - datacollector
 
+  redis:
+    image: redis/redis-stack-server
+    container_name: redis
+    restart: unless-stopped
+    <<: *logging
+    environment:
+      REDIS_ARGS: "--save 900 1 --save 300 10 --save 60 10000 --rdbcompression yes --dbfilename datacollector.rdb --appendonly yes --appendfsync everysec --no-appendfsync-on-rewrite no --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 32mb"
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - datacollector
+
   reverse-proxy:
     image: vpn.energyadvice.lt:10020/datahub-reverse-proxy:latest
     container_name: reverse-proxy
     restart: unless-stopped
     <<: *logging
     ports:
-      - "80:80"
+      - "127.0.0.1:80:80"
     depends_on:
       - datacollector
       - datapusher
