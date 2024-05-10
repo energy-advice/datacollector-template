@@ -12,7 +12,7 @@ services:
   datacollector:
     image: vpn.energyadvice.lt:10020/datacollector
     container_name: datacollector
-    restart: unless-stopped
+    restart: always
     <<: *logging
     environment:
       QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
@@ -33,7 +33,7 @@ services:
   datapusher:
     image: vpn.energyadvice.lt:10020/datapusher
     container_name: datapusher
-    restart: unless-stopped
+    restart: always
     <<: *logging
     environment:
       QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
@@ -51,7 +51,7 @@ services:
   mysql:
     image: mysql:8
     container_name: mysql
-    restart: unless-stopped
+    restart: always
     <<: *logging
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
@@ -65,7 +65,7 @@ services:
   redis:
     image: redis/redis-stack-server
     container_name: redis
-    restart: unless-stopped
+    restart: always
     <<: *logging
     environment:
       REDIS_ARGS: "--save 900 1 --save 300 10 --save 60 10000 --rdbcompression yes --dbfilename datacollector.rdb --appendonly yes --appendfsync everysec --no-appendfsync-on-rewrite no --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 32mb"
@@ -79,7 +79,7 @@ services:
   reverse-proxy:
     image: vpn.energyadvice.lt:10020/datahub-reverse-proxy:latest
     container_name: reverse-proxy
-    restart: unless-stopped
+    restart: always
     <<: *logging
     ports:
       - "127.0.0.1:80:80"
@@ -92,7 +92,7 @@ services:
   datahub-proxy:
     image: vpn.energyadvice.lt:10020/proxy/client
     container_name: datahub-proxy
-    restart: unless-stopped
+    restart: always
     <<: *logging
     environment:
       REQUESTED_SUBDOMAIN: "datahub"
