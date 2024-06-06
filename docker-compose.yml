@@ -53,6 +53,7 @@ services:
     container_name: mysql
     restart: always
     <<: *logging
+    command: --disable-log-bin
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
     volumes:
