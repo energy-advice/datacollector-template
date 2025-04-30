@@ -10,7 +10,7 @@ x-logging:
 
 services:
   datacollector:
-    image: vpn.energyadvice.lt:10020/datacollector
+    image: vpn.energyadvice.lt:10010/datacollector
     container_name: datacollector
     restart: always
     <<: *logging
@@ -31,7 +31,7 @@ services:
       - datacollector
 
   datapusher:
-    image: vpn.energyadvice.lt:10020/datapusher
+    image: vpn.energyadvice.lt:10010/datapusher
     container_name: datapusher
     restart: always
     <<: *logging
@@ -47,6 +47,20 @@ services:
       - mysql
     networks:
       - datacollector
+
+#  job-runner:
+#    image: vpn.energyadvice.lt:10010/job-runner
+#    container_name: job-runner
+#    restart: always
+#    <<: *logging
+#    ports:
+#      - "127.0.0.1:8080:8080"
+#    volumes:
+#      - ./jobrunner_data:/opt/jobrunner/data
+#    depends_on:
+#      - mysql
+#    networks:
+#      - datacollector
 
   mysql:
     image: mysql:8
@@ -78,7 +92,7 @@ services:
       - datacollector
 
   reverse-proxy:
-    image: vpn.energyadvice.lt:10020/datahub-reverse-proxy:latest
+    image: vpn.energyadvice.lt:10010/datahub-reverse-proxy:latest
     container_name: reverse-proxy
     restart: always
     <<: *logging
@@ -91,7 +105,7 @@ services:
       - datacollector
 
   datahub-proxy:
-    image: vpn.energyadvice.lt:10020/proxy/client
+    image: vpn.energyadvice.lt:10010/proxy/client
     container_name: datahub-proxy
     restart: always
     <<: *logging
@@ -103,6 +117,17 @@ services:
       SERVER: "https://datahub.app.energyadvice.lt"
     networks:
       - datacollector
+
+#  front-end:
+#    image: vpn.energyadvice.lt:10010/datacollector-frontend:master
+#    container_name: datahub-front-end
+#    <<: *logging
+#    restart: always
+#    ports:
+#      - "8085:80"
+#    networks:
+#      - datacollector
+
 
 networks:
   datacollector:
