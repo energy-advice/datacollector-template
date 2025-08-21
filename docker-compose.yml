@@ -1,23 +1,27 @@
-version: "3.9"
 
-x-logging:
-  &logging
+x-common:
+  &common
   logging:
     driver: "json-file"
     options:
       max-size: "20m"
       max-file: "5"
+  restart: always
+  env_file: ".env"
+  networks:
+    - datacollector
 
 services:
   datacollector:
     image: vpn.energyadvice.lt:10010/datacollector
     container_name: datacollector
-    restart: always
-    <<: *logging
+    <<: *common
     environment:
       QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
       QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
-      LT_ENERGYADVICE_DATACOLLECTOR_REMOTEMANAGEMENT_ENABLED: true
+      LT_ENERGYADVICE_DATACOLLECTOR_DWEEN_URL: ${DWEEN_URL:?}
+      LT_ENERGYADVICE_DATACOLLECTOR_PUSH_AUTH_TOKEN: ${DWEEN_TOKEN:?}
+      LT_ENERGYADVICE_DATACOLLECTOR_SERVICE_ID: ${DATAHUB_ID:?}
     volumes:
       - ./datacollector.properties:/opt/datacollector/config.properties
       - ./datacollector_data:/opt/datacollector/data
@@ -27,17 +31,18 @@ services:
     depends_on:
       - mysql
       - redis
-    networks:
-      - datacollector
 
   datapusher:
     image: vpn.energyadvice.lt:10010/datapusher
     container_name: datapusher
     restart: always
-    <<: *logging
+    <<: *common
     environment:
       QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
       QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
+      LT_ENERGYADVICE_DATAPUSHER_DWEEN_URL: ${DWEEN_URL:?}
+      LT_ENERGYADVICE_DATAPUSHER_BACKUPS_CLIENT_AUTH_TOKEN: ${DWEEN_TOKEN:?}
+      LT_ENERGYADVICE_DATAPUSHER_BACKUPS_SERVICE_ID: ${DATAHUB_ID:?}
     volumes:
       - ./datapusher.properties:/opt/datapusher/config.properties
       - ./datapusher_data:/opt/datapusher/data
@@ -45,28 +50,22 @@ services:
       - "47809-47909:47809-47909/udp"
     depends_on:
       - mysql
-    networks:
-      - datacollector
 
 #  job-runner:
 #    image: vpn.energyadvice.lt:10010/job-runner
 #    container_name: job-runner
-#    restart: always
-#    <<: *logging
+#    <<: *common
 #    ports:
 #      - "127.0.0.1:8080:8080"
 #    volumes:
 #      - ./jobrunner_data:/opt/jobrunner/data
 #    depends_on:
 #      - mysql
-#    networks:
-#      - datacollector
 
   mysql:
     image: mysql:8
     container_name: mysql
-    restart: always
-    <<: *logging
+    <<: *common
     command: --disable-log-bin
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
@@ -74,59 +73,50 @@ services:
       - ./mysql_data:/var/lib/mysql
     ports:
       - "127.0.0.1:3306:3306"
-    networks:
-      - datacollector
 
   redis:
     image: redis/redis-stack-server
     container_name: redis
-    restart: always
-    <<: *logging
+    <<: *common
     environment:
       REDIS_ARGS: "--save 900 1 --save 300 10 --save 60 10000 --rdbcompression yes --dbfilename datacollector.rdb --appendonly yes --appendfsync everysec --no-appendfsync-on-rewrite no --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 32mb"
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
       - ./redis_data:/data
-    networks:
-      - datacollector
 
   reverse-proxy:
     image: vpn.energyadvice.lt:10010/datahub-reverse-proxy:latest
     container_name: reverse-proxy
-    restart: always
-    <<: *logging
+    <<: *common
     ports:
       - "127.0.0.1:80:80"
     depends_on:
       - datacollector
       - datapusher
-    networks:
-      - datacollector
 
   datahub-proxy:
     image: vpn.energyadvice.lt:10010/proxy/client
     container_name: datahub-proxy
-    restart: always
-    <<: *logging
+    <<: *common
     environment:
       REQUESTED_SUBDOMAIN: "datahub"
       SERVICE_NAME: "datahub"
-      AUTH_TOKEN: ${AUTH_TOKEN}
+      AUTH_TOKEN: ${DATAHUB_PROXY_TOKEN:?}
       PROXIED_ADDRESS: "http://reverse-proxy:80"
       SERVER: "https://datahub.app.energyadvice.lt"
-    networks:
-      - datacollector
+
+  monitor:
+    image: vpn.energyadvice.lt:10010/datahub-telemetry-scraper
+    container_name: monitor
+    <<: *common
 
 #  front-end:
 #    image: vpn.energyadvice.lt:10010/datacollector-frontend:master
 #    container_name: datahub-front-end
-#    <<: *logging
-#    restart: always
+#    <<: *common
 #    ports:
 #      - "8085:80"
-#    networks:
-#      - datacollector
 
 
 networks:
