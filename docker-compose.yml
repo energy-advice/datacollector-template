@@ -30,7 +30,6 @@ services:
       - "47808:47808/udp"
     depends_on:
       - mysql
-      - redis
 
   datapusher:
     image: vpn.energyadvice.lt:10010/datapusher
@@ -51,10 +50,14 @@ services:
     depends_on:
       - mysql
 
-#  job-runner:
+#  jobrunner:
 #    image: vpn.energyadvice.lt:10010/job-runner
-#    container_name: job-runner
+#    container_name: jobrunner
 #    <<: *common
+#    environment:
+#      QUARKUS_DATASOURCE_USERNAME: ${DB_USERNAME:-root}
+#      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-root}
+#      LT_ENERGYADVICE_JOBRUNNER_EASAS_TOKEN: ${DWEEN_TOKEN:?}
 #    ports:
 #      - "127.0.0.1:8080:8080"
 #    volumes:
@@ -66,24 +69,13 @@ services:
     image: mysql:8
     container_name: mysql
     <<: *common
-    command: --disable-log-bin
+    command: ["mysqld", "--skip-log-bin"]
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
     volumes:
       - ./mysql_data:/var/lib/mysql
     ports:
       - "127.0.0.1:3306:3306"
-
-  redis:
-    image: redis/redis-stack-server
-    container_name: redis
-    <<: *common
-    environment:
-      REDIS_ARGS: "--save 900 1 --save 300 10 --save 60 10000 --rdbcompression yes --dbfilename datacollector.rdb --appendonly yes --appendfsync everysec --no-appendfsync-on-rewrite no --auto-aof-rewrite-percentage 100 --auto-aof-rewrite-min-size 32mb"
-    ports:
-      - "127.0.0.1:6379:6379"
-    volumes:
-      - ./redis_data:/data
 
   reverse-proxy:
     image: vpn.energyadvice.lt:10010/datahub-reverse-proxy:latest
