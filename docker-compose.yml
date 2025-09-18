@@ -62,6 +62,7 @@ services:
 #      - "127.0.0.1:8080:8080"
 #    volumes:
 #      - ./jobrunner_data:/opt/jobrunner/data
+#      - ./jobrunner.properties:/opt/jobrunner/config.properties
 #    depends_on:
 #      - mysql
 
